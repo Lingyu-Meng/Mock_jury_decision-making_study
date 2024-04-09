@@ -1,0 +1,12 @@
+"0","dat <- dat %>%
+  group_by(JP_No) %>%
+  mutate(sum_VC1 = sum(VC1),
+         sum_VC2 = sum(VC2)) %>% 
+  ungroup() %>% 
+  mutate(pre_agree_i = sd(VC1),
+         post_agree = sd(VC2)))
+"
+"2","Error: unexpected ')' in:
+""  mutate(pre_agree_i = sd(VC1),
+         post_agree = sd(VC2)))""
+"

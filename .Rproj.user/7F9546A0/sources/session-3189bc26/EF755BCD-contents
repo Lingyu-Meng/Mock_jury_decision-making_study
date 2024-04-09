@@ -1,0 +1,91 @@
+---
+title: "Mock_Jury"
+author: "Lingyu Meng, Tom Stafford"
+date: "2024-04-09"
+output: html_document
+bibliography: references.bib
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(haven) # for reading SPSS files (read_sav)
+```
+
+# Introduction
+
+According to the recent study [@lilley2023], rape myth beliefs appear to predispose juror judgments and decision-making even after group-deliberation.
+Using their data, we aim to show how deliberation moves people towards/award from judgements of guilt, and if this was a product of coming towards or away from the beliefs of the group they were in.
+
+```{r data wrangling}
+dat <- read_sav("Domestic Rape Trial Data - Video Jury group data[1] (1).sav")
+dat <- dat %>% # individual level data
+  group_by(JP_No) %>%
+  mutate(sum_VC1 = sum(VC1),
+         sum_VC2 = sum(VC2)) %>% 
+  ungroup() %>% 
+  mutate(pre_obj_i = abs((sum_VC1 - VC1)/ 11 - VC1), # the deviation from other 11 joiries' mean
+         post_obj_i = abs((sum_VC2 - VC2)/ 11 - VC2)) # the deviation from other 11 joiries' mean
+
+pan_dat <- dat %>% # group level data
+  group_by(JP_No) %>%
+  summarise(pre_contro= sd(VC1), # Controversy
+            post_contro = sd(VC2),
+            VC1 = mean(VC1),
+            VC2 = mean(VC2),
+            AMMSA = mean(AMMSA))
+```
+
+# Figure 
+
+```{r fig1 individual changing with AMMSA}
+fig1 <- ggplot(dat) +
+  aes(x = pre_obj_i, y = VC1, xend = post_obj_i, yend = VC2, color = AMMSA) +
+  geom_segment(arrow = arrow(),alpha = 0.5) +
+  scale_color_gradient(low="#619CFF", high="#F8766D") +
+  labs(title = "Individual Changing",
+       x = "Objection",
+       y = "Verdict Certainty")
+fig1
+```
+
+figure 1: Individual Changing with shown AMMSA In this figure, the x-axis is individual objection, which is calculated by the absolute value of the difference between the individual's score and the mean of other 11 juries' scores. The y-axis is the verdict certainty. The color of the points represents the AMMSA.
+
+```{r fig2 panel changing}
+fig2 <- ggplot(pan_dat) +
+  aes(x = pre_contro, y = VC1, xend = post_contro, yend = VC2, color = AMMSA) +
+  geom_segment(arrow = arrow()) +
+  scale_color_gradient(low="#619CFF", high="#F8766D") +
+  labs(title = "Panel Changing",
+       x = "Controversy",
+       y = "Panel averaged Verdict Certainty")
+fig2
+```
+
+figure 2: Panel Changing with shown AMMSA In this figure, the x-axis is the controversy, which is calculated by the standard deviation of the 12 juries' scores. The y-axis is the panel averaged verdict certainty. The color of the points represents the averaged AMMSA.
+
+```{r fig3 split AMMSA}
+# Using median segmentation, we aim to show how the AMMSA affects the change of the verdict certainty.
+dat <- dat %>% 
+  mutate(AMMSA_level = ifelse(AMMSA > median(AMMSA), "High", "Low"))
+dat_AMMSA <- dat %>% 
+  group_by(AMMSA_level) %>%
+  summarise(pre_contro= mean(pre_obj_i), # Controversy
+            post_contro = mean(post_obj_i),
+            VC1 = mean(VC1),
+            VC2 = mean(VC2))
+# plot
+fig3 <- ggplot(dat) +
+  aes(x = pre_obj_i, y = VC1, xend = post_obj_i, yend = VC2, color = AMMSA_level) +
+  geom_segment(arrow = arrow(),alpha = 0.2) +
+  labs(title = "Individual Changing",
+       x = "Objection",
+       y = "Verdict Certainty")
+fig3 + geom_segment(data = dat_AMMSA,
+                    arrow = arrow(),
+                    aes(x = pre_contro, y = VC1, xend = post_contro, yend = VC2, color = AMMSA_level),
+                    lwd = 2)
+```
+
+figure 3: Split AMMSA In this figure, we aim to show how the AMMSA affects the change of the verdict certainty. We use median segmentation to split the AMMSA into high and low levels. The x-axis is the controversy, which is calculated by the standard deviation of the 12 juries' scores. The y-axis is the panel averaged verdict certainty. The color of the points represents the AMMSA level. We added an averaged arrow, the thick one, to show the average change of the high and low AMMSA groups. In this case, the x-axis for averaged arrow is calculated by the average of the objection of each individual in the high and low AMMSA groups.
+
+# References
